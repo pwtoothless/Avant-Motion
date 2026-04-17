@@ -1,10 +1,4 @@
-//
-//  Avant_MotionApp.swift
-//  Avant Motion
-//
-//  Created by Peyton Ward on 4/3/26.
-//
-
+#if os(iOS)
 import SwiftUI
 import FirebaseCore
 
@@ -23,3 +17,5 @@ struct Avant_MotionApp: App {
         }
     }
 }
+
+#endif
