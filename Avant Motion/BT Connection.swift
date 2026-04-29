@@ -250,6 +250,14 @@ extension BluetoothManager: CBPeripheralDelegate {
             else if str.hasPrefix("D:") {
                 updateServoDegree(from: data)
             }
+            // Handling prosthetic step count data (cumulative)
+            else if str.hasPrefix("S:") {
+                let stepString = str.dropFirst(2)
+                if let steps = Int(stepString) {
+                    // Forward the cumulative step count to HealthKit manager
+                    HealthKitManager.shared.receiveProstheticStepCount(steps)
+                }
+            }
         } else {
             // Fallback for raw byte data that might represent battery percentage
             if data.count == 1 {
@@ -360,3 +368,4 @@ struct GyroValueBox: View {
         .frame(maxWidth: .infinity)
     }
 }
+

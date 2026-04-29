@@ -44,6 +44,16 @@
 		4CFCBC7C2F804DAB0012F78E /* Avant Motion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Avant Motion.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4CCCAC442FA27A2C0083731E /* Exceptions for "Avant Motion" folder in "Avant Motion" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Avant-Motion-Info.plist",
+			);
+			target = 4CFCBC7B2F804DAB0012F78E /* Avant Motion */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4CEA66722F92C69E00107913 /* Avant Companion Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -52,6 +62,9 @@
 		};
 		4CFCBC7E2F804DAB0012F78E /* Avant Motion */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4CCCAC442FA27A2C0083731E /* Exceptions for "Avant Motion" folder in "Avant Motion" target */,
+			);
 			path = "Avant Motion";
 			sourceTree = "<group>";
 		};
@@ -432,8 +445,10 @@
 				DEVELOPMENT_TEAM = K8LZ9X4DR7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Avant-Motion-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Used to Control/View status of Prosthetic Leg";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Used to push step count to Apple Health";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Used to push step count to Apple Health";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -469,8 +484,10 @@
 				DEVELOPMENT_TEAM = K8LZ9X4DR7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Avant-Motion-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Used to Control/View status of Prosthetic Leg";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Used to push step count to Apple Health";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Used to push step count to Apple Health";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

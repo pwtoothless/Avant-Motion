@@ -44,6 +44,7 @@ struct ContentView: View {
 
 struct SettingsView: View {
     @EnvironmentObject var bt: BluetoothManager
+    @ObservedObject private var health = HealthKitManager.shared
     
     var body: some View {
         List {
@@ -68,6 +69,56 @@ struct SettingsView: View {
                 
                 if let error = bt.cloudManager.syncError {
                     Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+            
+            Section("Health") {
+                // Tapping the row will request authorization if needed
+                Button(action: {
+                    if !health.isAuthorized {
+                        health.requestAuthorization()
+                    }
+                }) {
+                    HStack {
+                        Label("Apple Health", systemImage: "heart.fill")
+                        Spacer()
+                        StatusBadge(
+                            text: health.isAuthorized ? "Authorized" : "Not Authorized",
+                            color: health.isAuthorized ? .green : .orange
+                        )
+                    }
+                }
+                .buttonStyle(.plain)
+
+                HStack {
+                    Label("Prosthetic Steps", systemImage: "figure.walk")
+                    Spacer()
+                    Text("\(health.prostheticStepCount)")
+                        .foregroundStyle(.secondary)
+                }
+
+                if let last = health.lastWriteDate {
+                    HStack {
+                        Text("Last Health Sync")
+                        Spacer()
+                        Text(last, style: .time)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if health.lastWrittenDelta > 0 {
+                    HStack {
+                        Text("Last Write Delta")
+                        Spacer()
+                        Text("+\(health.lastWrittenDelta)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let err = health.lastError {
+                    Text(err)
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
