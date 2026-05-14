@@ -12,7 +12,7 @@ struct ContentView: View {
     @EnvironmentObject var bluetoothManager: BluetoothManager
 
     enum MenuItem: Hashable {
-        case settings, bluetooth, servo
+        case settings, bluetooth, servo, prosthetic
     }
 
     var body: some View {
@@ -23,19 +23,25 @@ struct ContentView: View {
                     .environmentObject(bluetoothManager)
                     .background(LiquidGlassBackground())
             }
+            
+            Tab("Prosthetic", systemImage: "figure.walk", value: .prosthetic) {
+                ProstheticLegView()
+                    .environmentObject(bluetoothManager)
+                    .background(LiquidGlassBackground())
+            }
 
-            Tab("Bluetooth", systemImage: "dot.radiowaves.left.and.right", value: .bluetooth) {
+            Tab(value: .bluetooth) {
                 BTContentView()
                     .environmentObject(bluetoothManager)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(LiquidGlassBackground())
-            }
-            
-            Tab("Servo", systemImage: "arrow.triangle.2.circlepath.camera", value: .servo) {
-                ServoControlView()
-                    .environmentObject(bluetoothManager)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(LiquidGlassBackground())
+            } label: {
+                Label {
+                    Text("Stats")
+                } icon: {
+                    Image(systemName: "chart.bar.xaxis.ascending")
+                        .symbolEffect(.drawOn.individually, options: .nonRepeating)
+                }
             }
         }
         .tabViewStyle(.sidebarAdaptable)
@@ -44,10 +50,15 @@ struct ContentView: View {
 
 struct SettingsView: View {
     @EnvironmentObject var bt: BluetoothManager
+    @EnvironmentObject var appSettings: AppSettings
     @ObservedObject private var health = HealthKitManager.shared
     
     var body: some View {
         List {
+            Section {
+                LegSettingsView()
+            }
+            
             Section("Cloud Connection") {
                 HStack {
                     Label("Firebase Status", systemImage: "cloud.fill")
@@ -140,14 +151,11 @@ struct SettingsView: View {
                     Text("\(bt.batteryPercentage)%")
                         .foregroundStyle(.secondary)
                 }
-                
-                // Updated to show the current servo degree, assuming it can go up to 270
-                HStack {
-                    Label("Servo", systemImage: "arrow.triangle.2.circlepath.camera")
-                    Spacer()
-                    Text("\(bt.currentServoDegree)°") // Displaying the current degree
-                        .foregroundStyle(.secondary)
-                }
+            }
+            
+            Section("App Settings") {
+                TextField("GitHub Owner", text: $appSettings.firmwareRepoOwner)
+                TextField("Repo Name", text: $appSettings.firmwareRepoName)
             }
         }
         .scrollContentBackground(.hidden)

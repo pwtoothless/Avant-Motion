@@ -32,76 +32,93 @@ class FirebaseCloudManager: ObservableObject {
         }
     }
 
-    /// Pushes X, Y, and Z values to Firebase for gyros G1, G2, G3 and battery status
+    /// Pushes X, Y, and Z values to Firebase for gyros G1, G2, G3, battery status, and firmware version.
     func pushData(
         gyro1: (x: String, y: String, z: String)?,
         gyro2: (x: String, y: String, z: String)?,
         gyro3: (x: String, y: String, z: String)?,
-        battery: Int
+        battery: Int,
+        firmwareVersion: String? // Added firmwareVersion parameter
     ) {
-        // Prepare the main "gyro_status" node
-        var gyroStatusData: [String: Any] = [:]
-
-        // Add G1 data if available
-        if let g1 = gyro1 {
-            gyroStatusData["G1"] = [
-                "x": g1.x,
-                "y": g1.y,
-                "z": g1.z,
-                "timestamp": ServerValue.timestamp()
-            ]
-        }
-
-        // Add G2 data if available
-        if let g2 = gyro2 {
-            gyroStatusData["G2"] = [
-                "x": g2.x,
-                "y": g2.y,
-                "z": g2.z,
-                "timestamp": ServerValue.timestamp()
-            ]
-        }
-
-        // Add G3 data if available
-        if let g3 = gyro3 {
-            gyroStatusData["G3"] = [
-                "x": g3.x,
-                "y": g3.y,
-                "z": g3.z,
-                "timestamp": ServerValue.timestamp()
-            ]
-        }
-
-        // Prepare battery data
-        let batteryData: [String: Any] = [
-            "battery_percent": battery,
-            "timestamp": ServerValue.timestamp()
-        ]
-        
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            print("[Firebase SYNC] Pushing gyroStatusData: \(gyroStatusData) at \(Date())")
-            // Use update to merge data, preventing overwriting if one push fails
-            let gyroRef = self?.dbRef.child("gyro_status")
-            gyroRef?.updateChildValues(gyroStatusData) { error, _ in
-                if let error = error {
+            guard let self = self else { return }
+
+            var updates: [String: Any] = [:]
+            let timestamp = ServerValue.timestamp()
+
+            // Prepare the main "gyro_status" node
+            var gyroStatusData: [String: Any] = [:]
+
+            // Add G1 data if available
+            if let g1 = gyro1 {
+                gyroStatusData["G1"] = [
+                    "x": g1.x,
+                    "y": g1.y,
+                    "z": g1.z,
+                    "timestamp": timestamp
+                ]
+            }
+
+            // Add G2 data if available
+            if let g2 = gyro2 {
+                gyroStatusData["G2"] = [
+                    "x": g2.x,
+                    "y": g2.y,
+                    "z": g2.z,
+                    "timestamp": timestamp
+                ]
+            }
+
+            // Add G3 data if available
+            if let g3 = gyro3 {
+                gyroStatusData["G3"] = [
+                    "x": g3.x,
+                    "y": g3.y,
+                    "z": g3.z,
+                    "timestamp": timestamp
+                ]
+            }
+            
+            // Only update gyro status if there's actual gyro data
+            if !gyroStatusData.isEmpty {
+                updates["/gyro_status"] = gyroStatusData
+                print("[Firebase SYNC] Preparing gyroStatusData: \(gyroStatusData) for path /gyro_status")
+            }
+
+            // Prepare battery data
+            let batteryData: [String: Any] = [
+                "battery_percent": battery,
+                "timestamp": timestamp
+            ]
+            updates["/battery_status"] = batteryData
+            print("[Firebase SYNC] Preparing batteryData: \(batteryData) for path /battery_status")
+
+            // Prepare firmware version data
+            if let fw = firmwareVersion {
+                let firmwareData: [String: Any] = [
+                    "version": fw,
+                    "timestamp": timestamp
+                ]
+                updates["/firmware_status"] = firmwareData // Store in a dedicated path
+                print("[Firebase SYNC] Preparing firmwareData: \(firmwareData) for path /firmware_status")
+            }
+
+            // Perform all updates in a single transaction for efficiency and atomicity
+            if !updates.isEmpty {
+                self.dbRef.updateChildValues(updates) { error, _ in
                     DispatchQueue.main.async {
-                        self?.syncError = "Gyro sync error: \(error.localizedDescription)"
-                    }
-                } else {
-                    print("[Firebase SYNC] Pushing batteryData: \(batteryData) at \(Date())")
-                    let batteryRef = self?.dbRef.child("battery_status")
-                    batteryRef?.setValue(batteryData) { batteryError, _ in
-                        DispatchQueue.main.async {
-                            if let batteryError = batteryError {
-                                self?.syncError = "Battery sync error: \(batteryError.localizedDescription)"
-                            } else {
-                                // Only clear error and update timestamp if both (or relevant parts) succeed
-                                self?.syncError = nil
-                                self?.lastSyncTimestamp = Date()
-                            }
+                        if let error = error {
+                            self.syncError = "Firebase sync error: \(error.localizedDescription)"
+                            print("Firebase sync error: \(error.localizedDescription)")
+                        } else {
+                            self.syncError = nil
+                            self.lastSyncTimestamp = Date()
+                            print("[Firebase SYNC] All data successfully synced to Firebase.")
                         }
                     }
                 }
+            } else {
+                print("[Firebase SYNC] No data to update.")
             }
         }
     }

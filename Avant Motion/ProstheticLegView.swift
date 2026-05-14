@@ -18,22 +18,16 @@ struct ProstheticLegView: View {
                 HStack {
                     Text("Select Leg:")
                     Spacer()
-                    Picker("Leg", selection: Binding(get: { legs.selectedLegId ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000") }, set: { newId in
-                        if let valid = newId, valid.uuidString != "00000000-0000-0000-0000-000000000000" {
-                            legs.selectedLegId = valid
-                        } else {
-                            legs.selectedLegId = nil
-                        }
-                    })) {
-                        Text("None").tag(UUID?(nilLiteral: ()))
+                    Picker("Leg", selection: $legs.selectedLegId) {
+                        Text("None").tag(UUID?.none)
                         ForEach(legs.legs) { leg in
-                            Text("\(leg.name) (\(leg.side.rawValue))").tag(UUID?(leg.id))
+                            Text("\(leg.name) (\(leg.side.rawValue))").tag(UUID?.some(leg.id))
                         }
                     }
                     .pickerStyle(.menu)
                 }
                 .padding(.horizontal)
-                .onChange(of: legs.selectedLegId) { _ in
+                .onChange(of: legs.selectedLegId) {
                     // Start connection process when a leg is chosen
                     bt.connect(to: selectedLeg)
                 }
@@ -63,13 +57,10 @@ struct ProstheticLegView: View {
                 
                 // Info row: Battery, Firmware, Update button
                 HStack(spacing: 12) {
-                    Label("Battery: \(bt.batteryPercentage)%", systemImage: "battery.100")
-                        .foregroundStyle(.primary)
-                    Divider()
                     Label("Firmware: \(bt.firmwareVersion ?? "Unknown")", systemImage: "gear")
                         .foregroundStyle(.primary)
                     Spacer()
-                    Button("Update") { showUpdateSheet = true }
+                    Button("Firmware Update") { showUpdateSheet = true }
                         .buttonStyle(.borderedProminent)
                 }
                 .padding(.horizontal)
@@ -79,6 +70,7 @@ struct ProstheticLegView: View {
             .navigationTitle("Prosthetic")
             .sheet(isPresented: $showUpdateSheet) {
                 FirmwareUpdateView(currentVersion: bt.firmwareVersion)
+                    .environmentObject(bt)
                     .environmentObject(appSettings)
             }
         }

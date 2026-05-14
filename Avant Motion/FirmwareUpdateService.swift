@@ -4,6 +4,17 @@ struct GitHubRelease: Decodable {
     let tag_name: String
     let name: String?
     let body: String?
+    let assets: [GitHubReleaseAsset]
+}
+
+struct GitHubReleaseAsset: Decodable, Identifiable {
+    let id: Int
+    let name: String
+    let browser_download_url: String
+
+    var downloadURL: URL? {
+        URL(string: browser_download_url)
+    }
 }
 
 enum FirmwareUpdateError: Error {
@@ -11,6 +22,7 @@ enum FirmwareUpdateError: Error {
     case network(Error)
     case decoding(Error)
     case notFound
+    case missingBinaryAsset
 }
 
 final class FirmwareUpdateService {
@@ -34,5 +46,23 @@ final class FirmwareUpdateService {
         } catch {
             throw FirmwareUpdateError.decoding(error)
         }
+    }
+
+    func latestBinaryAsset(in release: GitHubRelease) -> GitHubReleaseAsset? {
+        release.assets.first { $0.name.lowercased().hasSuffix(".bin") }
+    }
+
+    func isUpdateAvailable(currentVersion: String?, latestVersion: String) -> Bool {
+        guard let currentVersion, !currentVersion.isEmpty else {
+            return true
+        }
+
+        return normalizedVersion(currentVersion) != normalizedVersion(latestVersion)
+    }
+
+    private func normalizedVersion(_ version: String) -> String {
+        version
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "v", with: "", options: [.caseInsensitive, .anchored])
     }
 }
