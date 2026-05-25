@@ -180,17 +180,11 @@ struct FirmwareUpdateView: View {
         isChecking = true
         errorMessage = nil
         do {
-            let rel = try await service.fetchLatestRelease(owner: appSettings.firmwareRepoOwner, repo: appSettings.firmwareRepoName)
+            let rel = try await service.fetchLatestRelease(owner: "pwtoothless", repo: "Avant-Firmware")
             await MainActor.run {
                 self.release = rel
                 self.isChecking = false
-            }
-        } catch FirmwareUpdateError.notFound {
-            await MainActor.run {
-                self.errorMessage = "No releases found for \(appSettings.firmwareRepoOwner)/\(appSettings.firmwareRepoName)."
-                self.release = nil
-                self.isChecking = false
-            }
+            };
         } catch {
             await MainActor.run {
                 self.errorMessage = "Failed to check updates: \(error.localizedDescription)"

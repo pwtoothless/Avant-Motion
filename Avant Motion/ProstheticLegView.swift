@@ -3,7 +3,7 @@ import SwiftUI
 struct ProstheticLegView: View {
     @EnvironmentObject var bt: BluetoothManager
     @EnvironmentObject var legs: LegStore
-    @EnvironmentObject var appSettings: AppSettings
+    //@EnvironmentObject var appSettings: AppSettings
     
     @State private var showUpdateSheet = false
     
@@ -37,10 +37,6 @@ struct ProstheticLegView: View {
                     ZStack {
                         // Centered stylized prosthetic leg graphic
                         LegGraphic()
-                            .frame(width: min(geo.size.width, geo.size.height) * 0.35,
-                                   height: min(geo.size.width, geo.size.height) * 0.6)
-                            .position(x: geo.size.width * 0.45, y: geo.size.height * 0.5)
-                        
                         // Battery indicator on the right
                         let batteryX = geo.size.width * 0.8
                         let batteryY = geo.size.height * 0.4
@@ -71,7 +67,7 @@ struct ProstheticLegView: View {
             .sheet(isPresented: $showUpdateSheet) {
                 FirmwareUpdateView(currentVersion: bt.firmwareVersion)
                     .environmentObject(bt)
-                    .environmentObject(appSettings)
+                    //.environmentObject(appSettings)
             }
         }
     }
@@ -79,26 +75,16 @@ struct ProstheticLegView: View {
 
 private struct LegGraphic: View {
     var body: some View {
-        ZStack {
-            // Shin
-            RoundedRectangle(cornerRadius: 12)
-                .fill(LinearGradient(colors: [.gray.opacity(0.6), .gray.opacity(0.9)], startPoint: .top, endPoint: .bottom))
-            // Knee joint
-            Circle()
-                .fill(.black.opacity(0.8))
-                .frame(width: 24, height: 24)
-                .offset(y: -40)
-            // Foot
-            Capsule()
-                .fill(.gray.opacity(0.8))
-                .frame(width: 80, height: 22)
-                .offset(y: 110)
-        }
+        Image("Leg_-_Final_2026-May-08_12-11-43AM-000_CustomizedView13677740024")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 243 / 2, height: 768 / 2)
     }
 }
 
 private struct BatteryIndicatorView: View {
     let level: Int
+    
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: batterySymbol(for: level))
@@ -138,6 +124,7 @@ private struct BatteryIndicatorView: View {
 private struct DottedConnector: View {
     let start: CGPoint
     let end: CGPoint
+    
     var body: some View {
         Path { path in
             path.move(to: start)

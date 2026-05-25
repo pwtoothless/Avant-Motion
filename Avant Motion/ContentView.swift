@@ -50,7 +50,7 @@ struct ContentView: View {
 
 struct SettingsView: View {
     @EnvironmentObject var bt: BluetoothManager
-    @EnvironmentObject var appSettings: AppSettings
+    //@EnvironmentObject var appSettings: AppSettings
     @ObservedObject private var health = HealthKitManager.shared
     
     var body: some View {
@@ -137,127 +137,17 @@ struct SettingsView: View {
             
             Section("Hardware Status") {
                 HStack {
-                    Label("Bluetooth", systemImage: "bolt.fill")
-                    Spacer()
-                    StatusBadge(
-                        text: bt.connectedPeripheral != nil ? "Active" : "Idle",
-                        color: bt.connectedPeripheral != nil ? .blue : .gray
-                    )
-                }
-                
-                HStack {
                     Label("Battery", systemImage: "battery.100")
                     Spacer()
                     Text("\(bt.batteryPercentage)%")
                         .foregroundStyle(.secondary)
                 }
             }
-            
-            Section("App Settings") {
-                TextField("GitHub Owner", text: $appSettings.firmwareRepoOwner)
-                TextField("Repo Name", text: $appSettings.firmwareRepoName)
-            }
         }
         .scrollContentBackground(.hidden)
         .navigationTitle("Settings")
     }
 }
-
-struct ServoControlView: View {
-    @EnvironmentObject var bt: BluetoothManager
-    @State private var servoDegreeInput: String = ""
-    @FocusState private var isInputFocused: Bool
-
-    // Define the maximum servo degree based on your servo's capability
-    let maxServoDegree = 270
-    let minServoDegree = 0
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("Servo Control")
-                .font(.title.bold())
-
-            // --- Slider for Servo Angle ---
-            VStack {
-                Text("Sweep Servo Angle")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                
-                Slider(value: Binding<Double>(
-                    get: { Double(bt.currentServoDegree) },
-                    set: { newValue in
-                        let clampedValue = max(Double(minServoDegree), min(Double(maxServoDegree), newValue))
-                        bt.currentServoDegree = Int(clampedValue)
-                        bt.sendServoCommand(degree: bt.currentServoDegree)
-                    }
-                ), in: Double(minServoDegree)...Double(maxServoDegree))
-                .accentColor(.green) // You can change this color
-            }
-            .padding(.horizontal)
-            // --- End Slider ---
-
-
-            HStack {
-                Text("D:")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                TextField("Enter degree (\(minServoDegree)-\(maxServoDegree))", text: $servoDegreeInput)
-                    .keyboardType(.numberPad)
-                    .focused($isInputFocused)
-                    .padding()
-                    .background(Color.black.opacity(0.1))
-                    .cornerRadius(10)
-                    .frame(maxWidth: .infinity)
-                    .onChange(of: servoDegreeInput) { newValue in
-                        // Basic validation to keep input within numerical bounds
-                        let filteredNewValue = newValue.filter { $0.isNumber }
-                        if let degree = Int(filteredNewValue), degree >= minServoDegree, degree <= maxServoDegree {
-                            // Valid input, no immediate action needed here as it's bound to state
-                        } else if filteredNewValue.isEmpty {
-                            // Allow empty string for clearing
-                        } else {
-                          
-                            // If it's not empty and not a valid number/range, you might want to revert or warn.
-                            // For now, let it be, and validate on button press.
-                        }
-                    }
-            }
-            .padding(.horizontal)
-
-            Button("Set Servo Position") {
-                if let degree = Int(servoDegreeInput) {
-                    // Ensure the degree is within the valid range before sending
-                    let clampedDegree = max(minServoDegree, min(maxServoDegree, degree))
-                    bt.sendServoCommand(degree: clampedDegree)
-                    servoDegreeInput = "\(clampedDegree)" // Update text field to reflect clamped value
-                    bt.currentServoDegree = clampedDegree // Update the displayed degree immediately
-                }
-                isInputFocused = false // Dismiss keyboard after setting
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
-            .disabled(bt.connectedPeripheral == nil || bt.servoCharacteristic == nil)
-
-            // Display current servo degree if available and within the 0-270 range
-            if bt.currentServoDegree != 0 || (bt.currentServoDegree >= minServoDegree && bt.currentServoDegree <= maxServoDegree) {
-                Text("Current Servo Degree: \(bt.currentServoDegree)°")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-        }
-        .padding()
-        .onTapGesture {
-            isInputFocused = false // Dismiss keyboard when tapping outside
-        }
-        .onAppear {
-            // Initialize servoDegreeInput with the current servo degree when the view appears
-            servoDegreeInput = "\(bt.currentServoDegree)"
-        }
-    }
-}
-
 
 struct StatusBadge: View {
     let text: String

@@ -9,17 +9,11 @@ import Foundation
 import CoreBluetooth
 import SwiftUI
 import Combine
-import NetworkExtension // Needed for programmatic Wi-Fi control in OTAManager
+import NetworkExtension
 
 final class BluetoothManager: NSObject, ObservableObject {
     @Published var isScanning = false
     @Published var connectedPeripheral: CBPeripheral?
-    
-    // Gyro data for G1, G2, G3
-    @Published var gyro1Values: [String] = ["0.00", "0.00", "0.00"]
-    @Published var gyro2Values: [String] = ["0.00", "0.00", "0.00"]
-    @Published var gyro3Values: [String] = ["0.00", "0.00", "0.00"]
-    
     @Published var batteryPercentage: Int = 0
     @Published var firmwareVersion: String? = nil
     @Published var battPercent: [String] = ["0.00"] {
@@ -83,21 +77,13 @@ final class BluetoothManager: NSObject, ObservableObject {
         startScanning()
     }
     
-    /// Synchronizes current sensor data to the cloud.
+    /// Synchronizes current battery and firmware data to the cloud.
     private func syncToCloud() {
-        // Prepare gyro data tuples, only including valid data
-        let gyro1Data = gyro1Values.count == 3 ? (x: gyro1Values[0], y: gyro1Values[1], z: gyro1Values[2]) : nil
-        let gyro2Data = gyro2Values.count == 3 ? (x: gyro2Values[0], y: gyro2Values[1], z: gyro2Values[2]) : nil
-        let gyro3Data = gyro3Values.count == 3 ? (x: gyro3Values[0], y: gyro3Values[1], z: gyro3Values[2]) : nil
-        
-        // Only push if there's *any* data to send, including firmware
-        if gyro1Data != nil || gyro2Data != nil || gyro3Data != nil || firmwareVersion != nil || batteryPercentage != 0 {
+        // Only push if there's battery or firmware data to send
+        if firmwareVersion != nil || batteryPercentage != 0 {
             cloudManager.pushData(
-                gyro1: gyro1Data,
-                gyro2: gyro2Data,
-                gyro3: gyro3Data,
                 battery: batteryPercentage,
-                firmwareVersion: firmwareVersion // Pass the firmware version
+                firmwareVersion: firmwareVersion
             )
         } else {
              print("[BT Sync] No data available to sync.")
@@ -126,9 +112,7 @@ final class BluetoothManager: NSObject, ObservableObject {
             centralManager.cancelPeripheralConnection(peripheral)
         }
     }
-    
-    /// Sends a general command string to the servo characteristic.
-    /// This replaces `sendServoCommand` for more flexibility.
+
     private func sendBluetoothCommand(_ commandString: String) {
         guard let peripheral = connectedPeripheral else {
             print("Not connected to a peripheral.")
@@ -138,42 +122,10 @@ final class BluetoothManager: NSObject, ObservableObject {
             print("Command characteristic not discovered yet or is nil.")
             return
         }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            guard let data = commandString.data(using: .utf8) else {
-                print("Failed to encode command string: \(commandString)")
-                return
-            }
-            
-            if characteristic.properties.contains(.writeWithoutResponse) {
-                peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
-                print("Sent Bluetooth command (without response): \(commandString)")
-            } else if characteristic.properties.contains(.write) {
-                peripheral.writeValue(data, for: characteristic, type: .withResponse)
-                print("Sent Bluetooth command (with response): \(commandString)")
-            } else {
-                print("Command characteristic does not support writing.")
-            }
-        }
     }
     
-    // Existing sendServoCommand now uses the more general sendBluetoothCommand
-    func sendServoCommand(degree: Int) {
-        let clampedDegree = max(0, min(270, degree))
-        let commandString = "D:\(clampedDegree)"
-        sendBluetoothCommand(commandString)
-        
-        // Update currentServoDegree immediately after sending command
-        DispatchQueue.main.async {
-            self.currentServoDegree = clampedDegree
-        }
-    }
-    
-    // MARK: - Firmware Update Logic
-    /// Initiates the firmware update process.
-    /// This method will orchestrate downloading, triggering Arduino, connecting to WiFi, and uploading.
     func initiateFirmwareUpdate(githubOwner: String, repoName: String, firmwareFileName: String) {
-        let rawGitHubURLString = "https://raw.githubusercontent.com/\(githubOwner)/\(repoName)/main/\(firmwareFileName)"
+        let rawGitHubURLString = "https://raw.githubusercontent.com/pwtoothless/Avant-Firmware/main/\(firmwareFileName)"
         guard let downloadURL = URL(string: rawGitHubURLString) else {
             otaError = "Invalid firmware URL."
             otaStatus = .failed
@@ -314,9 +266,6 @@ extension BluetoothManager: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         DispatchQueue.main.async {
             self.connectedPeripheral = nil
-            self.gyro1Values = ["0.00", "0.00", "0.00"] // Resetting G1
-            self.gyro2Values = ["0.00", "0.00", "0.00"] // Resetting G2
-            self.gyro3Values = ["0.00", "0.00", "0.00"] // Resetting G3
             self.batteryPercentage = 0
             self.servoCharacteristic = nil
             self.currentServoDegree = 0
@@ -388,22 +337,8 @@ extension BluetoothManager: CBPeripheralDelegate {
         
         if let str = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
             print("[\(characteristic.uuid.uuidString)] Received data string: \"\(str)\"") // Log all received data strings
-            // Handling gyro data for G1, G2, G3
-            if str.hasPrefix("G1:") {
-                DispatchQueue.main.async {
-                    self.gyro1Values = self.parseGyroData(prefix: "G1:", dataString: str)
-                }
-            } else if str.hasPrefix("G2:") {
-                DispatchQueue.main.async {
-                    self.gyro2Values = self.parseGyroData(prefix: "G2:", dataString: str)
-                }
-            } else if str.hasPrefix("G3:") {
-                DispatchQueue.main.async {
-                    self.gyro3Values = self.parseGyroData(prefix: "G3:", dataString: str)
-                }
-            }
             // Handling battery data
-            else if str.hasPrefix("B:") {
+            if str.hasPrefix("B:") {
                 let batteryString = str.dropFirst(2)
                 if let batteryValue = Double(batteryString) {
                     DispatchQueue.main.async {
@@ -470,7 +405,7 @@ enum OTAStatus: String {
 
 struct BTContentView: View {
     @EnvironmentObject var bt: BluetoothManager
-    @EnvironmentObject var appSettings: AppSettings // Add AppSettings to environment
+    //@EnvironmentObject var appSettings: AppSettings
 
     var body: some View {
         VStack(spacing: 30) {
@@ -499,9 +434,7 @@ struct BTContentView: View {
         }
         .padding()
         .animation(.spring(), value: bt.connectedPeripheral)
-        .animation(.interactiveSpring(), value: bt.gyro1Values)
-        .animation(.interactiveSpring(), value: bt.gyro2Values)
-        .animation(.interactiveSpring(), value: bt.gyro3Values)
+
         .animation(.interactiveSpring(), value: bt.firmwareVersion) // Animate changes to firmware version
         .animation(.interactiveSpring(), value: bt.otaStatus) // Animate OTA status changes
         .animation(.interactiveSpring(), value: bt.otaProgress) // Animate OTA progress changes
